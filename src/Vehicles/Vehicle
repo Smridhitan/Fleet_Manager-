@@ -1,0 +1,103 @@
+package Vehicles;
+
+public class Vehicle implements Runnable {
+    protected final String id;
+    protected int mileage;
+    protected int fuel;
+    protected final int consumptionPerTick;
+
+    protected volatile boolean running = false;
+    protected volatile boolean paused = false;
+    protected volatile boolean outOfFuel = false;
+
+    public Vehicle(String id, int initialFuel, int consumptionPerTick) {
+        this.id = id;
+        this.mileage = 0;
+        this.fuel = Math.max(0, initialFuel);
+        this.consumptionPerTick = Math.max(1, consumptionPerTick);
+        this.outOfFuel = (this.fuel <= 0);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public synchronized int getMileage() {
+        return mileage;
+    }
+
+    public synchronized int getFuel() {
+        return fuel;
+    }
+
+    public synchronized String getStatus() {
+        if (outOfFuel) return "OutOfFuel";
+        if (paused) return "Paused";
+        if (running) return "Running";
+        return "Stopped";
+    }
+
+    public synchronized void resetState() {
+        running = true;
+        paused = false;
+        outOfFuel = (fuel <= 0);
+    }
+
+    public synchronized void pauseVehicle() {
+        paused = true;
+    }
+
+    public synchronized void resumeVehicle() {
+        if (!outOfFuel) paused = false;
+    }
+
+    public synchronized void stopVehicle() {
+        running = false;
+        paused = true;
+    }
+
+    public synchronized void refuel(int amount) {
+        if (amount <= 0) return;
+        fuel += amount;
+        if (fuel > 0) {
+            outOfFuel = false;
+            paused = false;
+        }
+    }
+
+    public synchronized void resetToZero() {
+        mileage = 0;
+        running = false;
+        paused = true;
+    }
+
+    @Override
+    public void run() {
+        running = true;
+        while (running) {
+            try {
+                if (paused || outOfFuel) {
+                    // Sleep short time and re-check
+                    Thread.sleep(500);
+                    continue;
+                }
+
+                synchronized (this) {
+                    mileage += 1;
+                    fuel -= consumptionPerTick;
+                    if (fuel <= 0) {
+                        fuel = 0;
+                        outOfFuel = true;
+                        paused = true;
+                    }
+                }
+
+                SimulationControllerHolder.recordDistance(1);
+                Thread.sleep(1000);
+
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+}

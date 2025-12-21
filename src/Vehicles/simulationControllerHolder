@@ -1,0 +1,20 @@
+package Vehicles;
+
+import Simulator.simulationController;
+
+public class SimulationControllerHolder {
+    private static simulationController controller;
+
+    public static void setController(simulationController c){
+        controller = c;
+    }
+
+    public static void recordDistance(int km){
+        if (controller != null) {
+            controller.recordDistance(km);
+        }
+        else{
+            Simulator.simulationController.totalDistanceCovered += km;
+        }
+    }
+}
